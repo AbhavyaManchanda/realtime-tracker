@@ -16,16 +16,86 @@ html,body{
     height:100vh;
 }
 
-.socket-indicator {
+.socket-panel {
     position: absolute;
     top: 12px;
     right: 12px;
     z-index: 1000;
-    background: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.95);
     border-radius: 8px;
-    padding: 8px 12px;
-    font-size: 16px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+    font-family: system-ui, -apple-system, sans-serif;
+}
+
+.socket-toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 500;
+    color: #333;
+    width: 100%;
+}
+
+.socket-toggle-btn:hover {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+#socket-expand-icon {
+    transition: transform 0.2s ease;
+    font-size: 12px;
+}
+
+#socket-expand-icon.expanded {
+    transform: rotate(180deg);
+}
+
+.socket-table-container {
+    max-height: 400px;
+    overflow-y: auto;
+    border-top: 1px solid #e0e0e0;
+}
+
+.socket-table-container.hidden {
+    display: none;
+}
+
+.socket-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.socket-table thead {
+    background: #f5f5f5;
+    position: sticky;
+    top: 0;
+}
+
+.socket-table th,
+.socket-table td {
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.socket-table th {
+    font-weight: 600;
+    color: #555;
+}
+
+.socket-table td {
+    color: #666;
+    word-break: break-all;
+}
+
+.socket-table tr:hover {
+    background: #fafafa;
 }
 
 .custom-icon {

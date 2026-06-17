@@ -13,7 +13,29 @@
 
 <body>
     <div id="map" class="map"></div>
-    <div id="connected-sockets" class="socket-indicator">Connected sockets: </div>
+    
+    <!-- Socket Indicator Panel -->
+    <div id="socket-panel" class="socket-panel">
+        <button id="socket-toggle" class="socket-toggle-btn">
+            <span id="socket-emoji-preview">Connected: 🗺️</span>
+            <span id="socket-expand-icon">▼</span>
+        </button>
+        
+        <div id="socket-table-container" class="socket-table-container hidden">
+            <table id="socket-table" class="socket-table">
+                <thead>
+                    <tr>
+                        <th>Socket ID</th>
+                        <th>Latitude</th>
+                        <th>Longitude</th>
+                        <th>Connected</th>
+                    </tr>
+                </thead>
+                <tbody id="socket-tbody">
+                </tbody>
+            </table>
+        </div>
+    </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"
         referrerpolicy="no-referrer"></script>

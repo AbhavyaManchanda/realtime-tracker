@@ -1,9 +1,10 @@
 const socket = io();
 let map;
-const connectedSockets = new Set();
+const connectedSockets = new Map(); // socketId → { latitude, longitude, connectedAt }
 const markers = {}; // socketId → marker
 const markerPositions = {};
 const locationCounts = {};
+let panelExpanded = false;
 
 function initMap() {
   map = L.map("map").setView([30.3431, 76.3554], 15);
@@ -26,11 +27,46 @@ function initMap() {
 
 initMap();
 
+// Socket panel toggle
+const toggleBtn = document.getElementById("socket-toggle");
+const tableContainer = document.getElementById("socket-table-container");
+const expandIcon = document.getElementById("socket-expand-icon");
+
+toggleBtn.addEventListener("click", () => {
+  panelExpanded = !panelExpanded;
+  tableContainer.classList.toggle("hidden");
+  expandIcon.classList.toggle("expanded");
+});
+
 function updateConnectedSockets() {
-  const container = document.getElementById("connected-sockets");
-  if (!container) return;
-  const icons = Array.from(connectedSockets).map(() => "🗺️").join(" ");
-  container.textContent = `Connected sockets: ${icons}`;
+  // Update emoji preview
+  const preview = document.getElementById("socket-emoji-preview");
+  const emojis = Array.from(connectedSockets.keys()).map(() => "🗺️").join(" ");
+  preview.textContent = `Connected: ${emojis || "none"}`;
+  
+  // Update table
+  updateSocketTable();
+}
+
+function updateSocketTable() {
+  const tbody = document.getElementById("socket-tbody");
+  tbody.innerHTML = "";
+  
+  connectedSockets.forEach((data, socketId) => {
+    const row = document.createElement("tr");
+    const shortId = socketId.slice(0, 12) + "...";
+    const lat = data.latitude ? data.latitude.toFixed(6) : "—";
+    const lng = data.longitude ? data.longitude.toFixed(6) : "—";
+    const connTime = new Date(data.connectedAt).toLocaleTimeString();
+    
+    row.innerHTML = `
+      <td title="${socketId}">${shortId}</td>
+      <td>${lat}</td>
+      <td>${lng}</td>
+      <td>${connTime}</td>
+    `;
+    tbody.appendChild(row);
+  });
 }
 
 function getMarkerPosition(id, latitude, longitude) {
@@ -51,7 +87,20 @@ function getMarkerPosition(id, latitude, longitude) {
 // Listen for location updates from ANY client
 socket.on("locationUpdate", (data) => {
   const { id, latitude, longitude } = data;
-  connectedSockets.add(id);
+  
+  // Add or update socket info
+  if (!connectedSockets.has(id)) {
+    connectedSockets.set(id, {
+      latitude,
+      longitude,
+      connectedAt: new Date().toISOString(),
+    });
+  } else {
+    const existing = connectedSockets.get(id);
+    existing.latitude = latitude;
+    existing.longitude = longitude;
+  }
+  
   updateConnectedSockets();
 
   const markerPos = getMarkerPosition(id, latitude, longitude);
