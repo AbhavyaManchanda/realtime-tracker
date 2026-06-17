@@ -6,7 +6,18 @@ const server = require("http").createServer(app);
 const socketio = require("socket.io");
 const io = socketio(server);
 
-const locations = {}; // socketId → { latitude, longitude }
+const locations = {}; // socketId → { latitude, longitude, deviceId, deviceName }
+
+// Known devices registry: deviceId → friendlyName
+const knownDevices = {
+  // Add known devices here:
+  // "device-uuid-123": "Mom's iPhone",
+  // "device-uuid-456": "Dad's Phone",
+};
+
+function getDeviceName(deviceId) {
+  return knownDevices[deviceId] || "Unknown Device";
+}
 
 app.set("view engine", "ejs");
 
@@ -19,17 +30,21 @@ io.on("connection", (socket) => {
   for (let id in locations) {
     socket.emit("locationUpdate", { id, ...locations[id] });
   }
+  
+  // Send the known devices list to this client
+  socket.emit("knownDevices", knownDevices);
 
   // When we receive a location from a client
   socket.on("location", (data) => {
-    const { latitude, longitude } = data;
+    const { latitude, longitude, deviceId } = data;
     const id = socket.id;
+    const deviceName = getDeviceName(deviceId);
 
-    // Save the socket's latest location
-    locations[id] = { latitude, longitude };
+    // Save the socket's latest location with device info
+    locations[id] = { latitude, longitude, deviceId, deviceName };
 
     // Send update to everyone (including sender)
-    io.emit("locationUpdate", { id, latitude, longitude });
+    io.emit("locationUpdate", { id, latitude, longitude, deviceId, deviceName });
   });
 
   // Handle disconnects

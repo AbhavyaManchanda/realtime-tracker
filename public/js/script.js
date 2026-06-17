@@ -1,6 +1,17 @@
 const socket = io();
 let map;
-const connectedSockets = new Map(); // socketId → { latitude, longitude, connectedAt }
+let deviceId = localStorage.getItem("deviceId") || generateDeviceId();
+let knownDevices = {};
+
+if (!localStorage.getItem("deviceId")) {
+  localStorage.setItem("deviceId", deviceId);
+}
+
+function generateDeviceId() {
+  return "device-" + Math.random().toString(36).substring(2, 15);
+}
+
+const connectedSockets = new Map(); // socketId → { latitude, longitude, deviceId, deviceName, connectedAt }
 const markers = {}; // socketId → marker
 const markerPositions = {};
 const locationCounts = {};
@@ -17,12 +28,15 @@ function initMap() {
     navigator.geolocation.watchPosition(
       (pos) => {
         const { latitude, longitude } = pos.coords;
-        socket.emit("location", { latitude, longitude });
+        socket.emit("location", { latitude, longitude, deviceId });
       },
       (err) => console.error("Geolocation error:", err),
       { enableHighAccuracy: true }
     );
   }
+  
+  // Log device ID for debugging
+  console.log("📱 Device ID:", deviceId);
 }
 
 initMap();
@@ -54,13 +68,13 @@ function updateSocketTable() {
   
   connectedSockets.forEach((data, socketId) => {
     const row = document.createElement("tr");
-    const shortId = socketId.slice(0, 12) + "...";
+    const deviceName = data.deviceName || "Unknown";
     const lat = data.latitude ? data.latitude.toFixed(6) : "—";
     const lng = data.longitude ? data.longitude.toFixed(6) : "—";
     const connTime = new Date(data.connectedAt).toLocaleTimeString();
     
     row.innerHTML = `
-      <td title="${socketId}">${shortId}</td>
+      <td title="${data.deviceId || socketId}">${deviceName}</td>
       <td>${lat}</td>
       <td>${lng}</td>
       <td>${connTime}</td>
@@ -84,21 +98,30 @@ function getMarkerPosition(id, latitude, longitude) {
   return pos;
 }
 
+// Receive known devices list from server
+socket.on("knownDevices", (devices) => {
+  knownDevices = devices;
+});
+
 // Listen for location updates from ANY client
 socket.on("locationUpdate", (data) => {
-  const { id, latitude, longitude } = data;
+  const { id, latitude, longitude, deviceId, deviceName } = data;
   
   // Add or update socket info
   if (!connectedSockets.has(id)) {
     connectedSockets.set(id, {
       latitude,
       longitude,
+      deviceId,
+      deviceName: deviceName || "Unknown Device",
       connectedAt: new Date().toISOString(),
     });
   } else {
     const existing = connectedSockets.get(id);
     existing.latitude = latitude;
     existing.longitude = longitude;
+    existing.deviceId = deviceId;
+    existing.deviceName = deviceName || "Unknown Device";
   }
   
   updateConnectedSockets();
