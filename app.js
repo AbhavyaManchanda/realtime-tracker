@@ -6,10 +6,10 @@ const server = require("http").createServer(app);
 const socketio = require("socket.io");
 const io = socketio(server);
 
-const locations = {}; // clientId → { lat, lng }
-const socketToClient = {}; // socket.id → clientId
+const locations = {}; // socketId → { latitude, longitude }
 
 app.set("view engine", "ejs");
+
 app.use(express.static(path.join(__dirname, "public")));
 
 io.on("connection", (socket) => {
@@ -22,12 +22,10 @@ io.on("connection", (socket) => {
 
   // When we receive a location from a client
   socket.on("location", (data) => {
-    const { id, latitude, longitude } = data;
+    const { latitude, longitude } = data;
+    const id = socket.id;
 
-    // Remember which socket belongs to which client ID
-    socketToClient[socket.id] = id;
-
-    // Save the client’s latest location
+    // Save the socket's latest location
     locations[id] = { latitude, longitude };
 
     // Send update to everyone (including sender)
@@ -36,12 +34,11 @@ io.on("connection", (socket) => {
 
   // Handle disconnects
   socket.on("disconnect", () => {
-    const clientId = socketToClient[socket.id];
-    if (clientId) {
-      delete locations[clientId];
-      delete socketToClient[socket.id];
-      io.emit("user-disconnected", clientId);
-      console.log("🔴 Disconnected:", clientId);
+    const id = socket.id;
+    if (locations[id]) {
+      delete locations[id];
+      io.emit("user-disconnected", id);
+      console.log("🔴 Disconnected:", id);
     }
   });
 });

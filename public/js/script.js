@@ -1,6 +1,9 @@
 const socket = io();
-const clientId = Math.random().toString(36).substring(2, 10); // unique ID per tab
-let map, marker;
+let map;
+const connectedSockets = new Set();
+const markers = {}; // socketId → marker
+const markerPositions = {};
+const locationCounts = {};
 
 function initMap() {
   map = L.map("map").setView([30.3431, 76.3554], 15);
@@ -13,7 +16,7 @@ function initMap() {
     navigator.geolocation.watchPosition(
       (pos) => {
         const { latitude, longitude } = pos.coords;
-        socket.emit("location", { id: clientId, latitude, longitude });
+        socket.emit("location", { latitude, longitude });
       },
       (err) => console.error("Geolocation error:", err),
       { enableHighAccuracy: true }
@@ -23,18 +26,49 @@ function initMap() {
 
 initMap();
 
-const markers = {}; // clientId → marker
+function updateConnectedSockets() {
+  const container = document.getElementById("connected-sockets");
+  if (!container) return;
+  const icons = Array.from(connectedSockets).map(() => "🗺️").join(" ");
+  container.textContent = `Connected sockets: ${icons}`;
+}
+
+function getMarkerPosition(id, latitude, longitude) {
+  if (markerPositions[id]) {
+    return markerPositions[id];
+  }
+
+  const key = `${latitude.toFixed(6)}|${longitude.toFixed(6)}`;
+  const count = locationCounts[key] || 0;
+  locationCounts[key] = count + 1;
+
+  const offset = 0.00008 * count;
+  const pos = [latitude + offset, longitude + offset];
+  markerPositions[id] = pos;
+  return pos;
+}
 
 // Listen for location updates from ANY client
 socket.on("locationUpdate", (data) => {
   const { id, latitude, longitude } = data;
+  connectedSockets.add(id);
+  updateConnectedSockets();
+
+  const markerPos = getMarkerPosition(id, latitude, longitude);
 
   if (markers[id]) {
-    markers[id].setLatLng([latitude, longitude]);
+    markers[id].setLatLng(markerPos);
   } else {
-    markers[id] = L.marker([latitude, longitude])
+    markers[id] = L.marker(markerPos, {
+      icon: L.divIcon({
+        className: "custom-icon",
+        html: "🗺️",
+        iconSize: [24, 24],
+        iconAnchor: [12, 24],
+      }),
+    })
       .addTo(map)
-      .bindPopup(`Latitude: ${latitude}<br>Longitude: ${longitude}`);
+      .bindPopup(`Socket: ${id}<br>Latitude: ${latitude}<br>Longitude: ${longitude}`);
   }
 });
 
@@ -44,4 +78,6 @@ socket.on("user-disconnected", (id) => {
     map.removeLayer(markers[id]);
     delete markers[id];
   }
+  connectedSockets.delete(id);
+  updateConnectedSockets();
 });
