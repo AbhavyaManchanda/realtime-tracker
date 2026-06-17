@@ -62,7 +62,7 @@ socket.on("locationUpdate", (data) => {
     markers[id] = L.marker(markerPos, {
       icon: L.divIcon({
         className: "custom-icon",
-        html: "🗺️",
+        html: "📍",
         iconSize: [24, 24],
         iconAnchor: [12, 24],
       }),
